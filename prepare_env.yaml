@@ -1,6 +1,6 @@
 substitutions:
-  _CLUSTER_NAME: test222222
-  _CLUSTER_ZONE: us-central1-c
+  _CLUSTER_NAME: testcluster
+  _CLUSTER_ZONE: us-central1
   _INJECT_NAMESPACES: default
 
 steps:
