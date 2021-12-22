@@ -1,0 +1,26 @@
+substitutions:
+  _CLUSTER_NAME: test222222
+  _CLUSTER_ZONE: us-central1-c
+  _INJECT_NAMESPACES: default
+
+steps:
+  - id: "Check installation environment"
+    name: gcr.io/onesnastaging/istio-install-image
+    entrypoint: /bin/bash
+    args: ['devops/deploy-to/k8s/istio/cloudbuild/scripts/check_cluster.sh', 
+           '-p', '${PROJECT_ID}', 
+           '-c', '${_CLUSTER_NAME}', 
+           '-z', '${_CLUSTER_ZONE}']
+
+  - id: "Install istio environment"
+    name: gcr.io/onesnastaging/istio-install-image
+    entrypoint: /bin/bash
+    env: ['INJECT_NAMESPACES=${_INJECT_NAMESPACES}']
+    args: ['devops/deploy-to/k8s/istio/cloudbuild/scripts/install_istio.sh', 
+           '-p', '${PROJECT_ID}', 
+           '-c', '${_CLUSTER_NAME}', 
+           '-z', '${_CLUSTER_ZONE}']
+
+timeout: 3600s
+options:
+    substitution_option: 'ALLOW_LOOSE'
