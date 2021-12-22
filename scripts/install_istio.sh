@@ -52,7 +52,7 @@ fi
 
 # Change master network ports
 echo "================== add port 15017 to master network =================="
-network_name=$(gcloud compute firewall-rules list --filter="name~'*$cluster_name*'" --project=$gcp_project --format=json | jq '.[0].name' | sed 's/"//g')
+network_name=$(gcloud compute firewall-rules list --filter="name~testcluster" --project=$gcp_project --format=json | jq '.[0].name' | sed 's/"//g')
 execCMD "gcloud compute firewall-rules update $network_name --allow tcp:10250,tcp:443,tcp:15017,tcp:8080,tcp:15000 --project=$gcp_project"
 status=$?
 if [[ $status -eq 0 ]]; then
