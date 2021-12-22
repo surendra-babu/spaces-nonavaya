@@ -5,9 +5,9 @@ execCMD(){
 }
 
 
-gcp_project="onesnastaging"
-cluster_name="artillery-vu"
-zone="us-central1-a"
+gcp_project="betsol-spaces-playground"
+cluster_name="testcluster"
+zone="us-central1"
 
 while [ "$1" != "" ]; do
   case $1 in
@@ -38,12 +38,12 @@ if [ "$need_help" = true ]; then
   exit
 fi
 
-gcloud container clusters describe $cluster_name  --zone=$zone --project=$gcp_project --format=json > cluster_info.json
+gcloud container clusters describe $cluster_name  --region=$zone --project=$gcp_project --format=json > cluster_info.json
 
 echo "=============== Check the addon of http ==================="
 is_http_disabled=$(cat "cluster_info.json" | jq ".addonsConfig.httpLoadBalancing.disabled")
 echo "============= httpLoadBalancing  |$is_http_disabled| "
 if [[ "$is_http_disabled" = "true" ]]; then
   echo "The cluster didn't start http addon. Install the http addon in this cluster!"
-  execCMD "gcloud container clusters update $cluster_name --update-addons='HttpLoadBalancing=ENABLED' --zone=$zone --project=$gcp_project"
+  execCMD "gcloud container clusters update $cluster_name --update-addons='HttpLoadBalancing=ENABLED' --region=$zone --project=$gcp_project"
 fi
