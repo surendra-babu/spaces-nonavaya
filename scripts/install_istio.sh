@@ -5,9 +5,9 @@ execCMD(){
 }
 
 
-gcp_project="onesnastaging"
-cluster_name="artillery-vu"
-zone="us-central1-a"
+gcp_project="betsol-spaces-playground"
+cluster_name="testcluster"
+zone="us-central1"
 
 while [ "$1" != "" ]; do
   case $1 in
@@ -41,7 +41,7 @@ fi
 
 # Get credential of the cluster
 echo "===================   Connect to the cluster now ======================="
-execCMD "gcloud container clusters get-credentials $cluster_name --zone=$zone --project=$gcp_project"
+execCMD "gcloud container clusters get-credentials $cluster_name --region=$zone --project=$gcp_project"
 status=$?
 if [[ $status -eq 0 ]]; then
   echo "Connect to the cluster $cluster_name successfully!"
