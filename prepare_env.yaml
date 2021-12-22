@@ -7,7 +7,7 @@ steps:
   - id: "Check installation environment"
     name: gcr.io/onesnastaging/istio-install-image
     entrypoint: /bin/bash
-    args: ['devops/deploy-to/k8s/istio/cloudbuild/scripts/check_cluster.sh', 
+    args: ['scripts/check_cluster.sh', 
            '-p', '${PROJECT_ID}', 
            '-c', '${_CLUSTER_NAME}', 
            '-z', '${_CLUSTER_ZONE}']
@@ -16,7 +16,7 @@ steps:
     name: gcr.io/onesnastaging/istio-install-image
     entrypoint: /bin/bash
     env: ['INJECT_NAMESPACES=${_INJECT_NAMESPACES}']
-    args: ['devops/deploy-to/k8s/istio/cloudbuild/scripts/install_istio.sh', 
+    args: ['scripts/install_istio.sh', 
            '-p', '${PROJECT_ID}', 
            '-c', '${_CLUSTER_NAME}', 
            '-z', '${_CLUSTER_ZONE}']
