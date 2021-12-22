@@ -1,0 +1,9 @@
+frontend_neg: "frontend-2021"
+socketio_neg: "socketio-2021"
+task_neg:     "task-2021"
+ingressGatewyasCpu: 200m
+ingressGatewyasMem: 40Mi
+pilotAutoscalMin: 1
+pilotAutoscalMax: 4
+ingressGatewyasAutoscalMin: 1
+ingressGatewyasAutoscalMax: 4

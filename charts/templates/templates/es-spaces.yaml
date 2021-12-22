@@ -1,0 +1,303 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+  name: spaces-istiocontrolplane
+  label:
+    app.kubernetes.io/managed-by: Helm
+  annotation:
+    meta.helm.sh/release-name: spaces-operator
+    meta.helm.sh/release-namespace: default
+spec:
+  hub: docker.io/istio
+  tag: 1.10.0
+
+  # You may override parts of meshconfig by uncommenting the following lines.
+  meshConfig:
+    accessLogFile: ""
+    # accessLogFile: /dev/stdout
+    defaultConfig:
+      proxyMetadata: {}
+    enablePrometheusMerge: true
+    # Opt-out of global http2 upgrades.
+    # Destination rule is used to opt-in.
+    # h2_upgrade_policy: DO_NOT_UPGRADE
+
+  # Traffic management feature
+  components:
+    base:
+      enabled: true
+    pilot:
+      enabled: true
+
+    # Istio Gateway feature
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: {{ .Values.ingressGatewyasCpu }}
+            memory: {{ .Values.ingressGatewyasMem }}
+        serviceAnnotations:
+          cloud.google.com/neg: '{"exposed_ports": {"80":{"name": "{{ .Values.frontend_neg }}"}, "100":{"name": "{{ .Values.task_neg }}"}}}'
+        service:
+          ports:
+            ## You can add custom gateway ports in user values overrides, but it must include those ports since helm replaces.
+            # Note that AWS ELB will by default perform health checks on the first port
+            # on this list. Setting this to the health check port will ensure that health
+            # checks always work. https://github.com/istio/istio/issues/12503
+            - port: 15021
+              targetPort: 15021
+              name: status-port
+            - port: 80
+              targetPort: 8080
+              name: frontend-http
+            - port: 100
+              targetPort: 8100
+              name: task-http
+            - port: 110
+              targetPort: 8110
+              name: grpc-task
+            - port: 443
+              targetPort: 8443
+              name: https
+            - port: 31400
+              targetPort: 31400
+              name: tcp
+              # This is the port where sni routing happens
+            - port: 15443
+              targetPort: 15443
+              name: tls
+    # - name: istio-ilbgateway
+    #   enabled: true
+    #   k8s:
+    #     serviceAnnotations:
+    #       cloud.google.com/load-balancer-type: "Internal"
+    #     hpaSpec:
+    #       maxReplicas: 100
+    #       metrics:
+    #       - resource:
+    #           name: cpu
+    #           targetAverageUtilization: 80
+    #         type: Resource
+    #       minReplicas: 4
+    #       scaleTargetRef:
+    #         apiVersion: apps/v1
+    #         kind: Deployment
+    #         name: istio-ilbgateway
+    #     resources:
+    #       limits:
+    #         cpu: 2000m
+    #         memory: 1024Mi
+    #       requests:
+    #         cpu: 500m
+    #         memory: 128Mi
+    #     service:
+    #       ports:
+    #         - port: 110
+    #           targetPort: 8110
+    #           name: task-grpc
+    #     strategy:
+    #       rollingUpdate:
+    #         maxSurge: 100%
+    #         maxUnavailable: 25%
+    #     overlays:
+    #       - kind: HorizontalPodAutoscaler
+    #         name: istio-ilbgateway
+    #         patches:
+    #           - path: metadata.labels.app
+    #             value: istio-ilbgateway
+    #           - path: metadata.labels.istio
+    #             value: ilbgateway
+    #           - path: spec.scaleTargetRef.name
+    #             value: istio-ilbgateway
+    #       - kind: Deployment
+    #         name: istio-ilbgateway
+    #         patches:
+    #           - path: metadata.labels.app
+    #             value: istio-ilbgateway
+    #           - path: metadata.labels.istio
+    #             value: ilbgateway
+    #           - path: spec.selector.matchLabels.app
+    #             value: istio-ilbgateway
+    #           - path: spec.selector.matchLabels.istio
+    #             value: ilbgateway
+    #           - path: spec.template.metadata.labels.app
+    #             value: istio-ilbgateway
+    #           - path: spec.template.metadata.labels.istio
+    #             value: ilbgateway
+    #       - kind: Service
+    #         name: istio-ilbgateway
+    #         patches:
+    #           - path: metadata.labels.app
+    #             value: istio-ilbgateway
+    #           - path: metadata.labels.istio
+    #             value: ilbgateway
+    #           - path: spec.selector.app
+    #             value: istio-ilbgateway
+    #           - path: spec.selector.istio
+    #             value: ilbgateway
+    #           - path: spec.clusterIP
+    #             value: None # Make headless service
+    egressGateways:
+    - name: istio-egressgateway
+      enabled: false
+
+    # Istio CNI feature
+    cni:
+      enabled: false
+    
+    # istiod remote configuration wwhen istiod isn't installed on the cluster
+    istiodRemote:
+      enabled: false
+
+  # Global values passed through to helm global.yaml.
+  # Please keep this in sync with manifests/charts/global.yaml
+  values:
+    global:
+      istioNamespace: istio-system
+      istiod:
+        enableAnalysis: false
+      logging:
+        level: "default:info"
+      logAsJson: false
+      pilotCertProvider: istiod
+      jwtPolicy: third-party-jwt
+      proxy:
+        image: proxyv2
+        clusterDomain: "cluster.local"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 2000m
+            memory: 2048Mi
+        logLevel: warning
+        componentLogLevel: "misc:error"
+        privileged: false
+        enableCoreDump: false
+        statusPort: 15020
+        readinessInitialDelaySeconds: 1
+        readinessPeriodSeconds: 2
+        readinessFailureThreshold: 30
+        includeIPRanges: "*"
+        excludeIPRanges: ""
+        excludeOutboundPorts: ""
+        excludeInboundPorts: ""
+        autoInject: enabled
+        tracer: "zipkin"
+      proxy_init:
+        image: proxyv2
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 2048Mi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+      # Specify image pull policy if default behavior isn't desired.
+      # Default behavior: latest images will be Always else IfNotPresent.
+      imagePullPolicy: ""
+      operatorManageWebhooks: false
+      tracer:
+        lightstep: {}
+        zipkin: {}
+        datadog: {}
+        stackdriver: {}
+      imagePullSecrets: []
+      arch:
+        amd64: 2
+        s390x: 2
+        ppc64le: 2
+      oneNamespace: false
+      defaultNodeSelector: {}
+      configValidation: true
+      multiCluster:
+        enabled: false
+        clusterName: ""
+      omitSidecarInjectorConfigMap: false
+      network: ""
+      defaultResources:
+        requests:
+          cpu: 10m
+      defaultPodDisruptionBudget:
+        enabled: true
+      priorityClassName: ""
+      useMCP: false
+      sds:
+        token:
+          aud: istio-ca
+      sts:
+        servicePort: 0
+      meshNetworks: {}
+      mountMtlsCerts: false
+    base:
+      enableCRDTemplates: false
+      validationURL: ""
+    pilot:
+      autoscaleEnabled: true
+      autoscaleMin: {{ .Values.pilotAutoscalMin }}
+      autoscaleMax: {{ .Values.pilotAutoscalMax }}
+      image: pilot
+      traceSampling: 1.0
+      env: {}
+      cpu:
+        targetAverageUtilization: 80
+      nodeSelector: {}
+      keepaliveMaxServerConnectionAge: 30m
+      enableProtocolSniffingForOutbound: true
+      enableProtocolSniffingForInbound: true
+      deploymentLabels:
+      configMap: true
+
+    telemetry:
+      enabled: true
+      v2:
+        enabled: true
+        metadataExchange:
+          wasmEnabled: false
+        prometheus:
+          wasmEnabled: false
+          enabled: true
+        stackdriver:
+          enabled: false
+          logging: false
+          monitoring: true
+          topology: false
+          configOverride: {}
+
+    istiodRemote:
+      injectionURL: ""
+      
+    gateways:
+      istio-egressgateway:
+        zvpn: {}
+        env: {}
+        autoscaleEnabled: true
+        type: ClusterIP
+        name: istio-egressgateway
+        secretVolumes:
+          - name: egressgateway-certs
+            secretName: istio-egressgateway-certs
+            mountPath: /etc/istio/egressgateway-certs
+          - name: egressgateway-ca-certs
+            secretName: istio-egressgateway-ca-certs
+            mountPath: /etc/istio/egressgateway-ca-certs
+
+      istio-ingressgateway:
+        autoscaleEnabled: true
+        autoscaleMin: {{ .Values.ingressGatewyasAutoscalMin }}
+        autoscaleMax: {{ .Values.ingressGatewyasAutoscalMax }}
+        type: ClusterIP
+        name: istio-ingressgateway
+        zvpn: {}
+        env: {}
+        secretVolumes:
+          - name: ingressgateway-certs
+            secretName: istio-ingressgateway-certs
+            mountPath: /etc/istio/ingressgateway-certs
+          - name: ingressgateway-ca-certs
+            secretName: istio-ingressgateway-ca-certs
+            mountPath: /etc/istio/ingressgateway-ca-certs
