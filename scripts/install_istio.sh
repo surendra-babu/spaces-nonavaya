@@ -90,7 +90,7 @@ fi
 
 cat ./isto_oper_overwrite.yaml 
 
-execCMD "helm upgrade --install -f ./isto_oper_overwrite.yaml spaces-operator devops/deploy-to/k8s/istio/charts/spaces-operator --wait"
+execCMD "helm upgrade --install -f ./isto_oper_overwrite.yaml spaces-operator charts/spaces-operator --wait"
 # Checking status of the spaces-istiocontrolplane 
 echo "==================   Check status of spaces-istiocontrolplane   ========================="
 statusResult=0
