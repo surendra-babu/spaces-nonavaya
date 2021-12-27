@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spaces-frontend
+  namespace: {{ .Values.spacesNamespace }}
+  labels:
+    role: spaces-frontend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    role: frontend
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: spaces-frontend-gateway
+  namespace: {{ .Values.spacesNamespace }}
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: frontend-http
+      protocol: HTTP
+    hosts:
+    - "*"

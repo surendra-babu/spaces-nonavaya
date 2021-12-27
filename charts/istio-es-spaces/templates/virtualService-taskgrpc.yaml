@@ -1,0 +1,48 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: task-grpc-gateway
+  namespace: {{ .Values.spacesNamespace }}
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 110
+      name: task-grpc
+      protocol: http
+    hosts:
+    - "*"    
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: task-grpc-virtualservice
+  namespace: {{ .Values.spacesNamespace }}
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - task-grpc-gateway
+  http:   
+  - match: 
+    - uri:
+        prefix: /  
+    route:
+    - destination:
+        host: task-grpc
+        port:
+          number: 8110   
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: task-grpc-destination
+  namespace: {{ .Values.spacesNamespace }}
+spec:
+  host: task-grpc
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL  
+    loadBalancer:
+      simple: ROUND_ROBIN

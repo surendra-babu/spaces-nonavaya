@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spaces-task
+  namespace: {{ .Values.spacesNamespace }}
+  labels:
+    role: spaces-task
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    role: task
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-grpc
+  namespace: {{ .Values.spacesNamespace }}
+  labels:
+    role: spaces-task
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8110
+      targetPort: 8110
+      protocol: TCP
+      name: grpc-port
+  selector:
+    role: task-primary
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: spaces-task-gateway
+  namespace: {{ .Values.spacesNamespace }}
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 100
+      name: task-http
+      protocol: HTTP
+    hosts:
+    - "*"

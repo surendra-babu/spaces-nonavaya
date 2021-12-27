@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: socketio-proxy
+  namespace: socketio-proxy
+  labels:
+    role: socketio-proxy
+  annotations:
+    cloud.google.com/neg: '{"exposed_ports": {"90":{"name": "socketio-proxy-neg-{{ .Values.clustername }}"}}}'
+spec:
+  type: ClusterIP
+  ports:
+    - port: 90
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    role: socketio-proxy
