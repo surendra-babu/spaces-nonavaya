@@ -20,6 +20,15 @@ steps:
            '-p', '${PROJECT_ID}', 
            '-c', '${_CLUSTER_NAME}', 
            '-z', '${_CLUSTER_ZONE}']
+           
+  - id: "Install simple spaces app"
+    name: gcr.io/onesnastaging/istio-install-image
+    entrypoint: /bin/bash
+    env: ['INJECT_NAMESPACES=${_INJECT_NAMESPACES}']
+    args: ['scripts/install_simpleApp.sh', 
+           '-p', '${PROJECT_ID}', 
+           '-c', '${_CLUSTER_NAME}', 
+           '-z', '${_CLUSTER_ZONE}']
 
 timeout: 3600s
 options:
