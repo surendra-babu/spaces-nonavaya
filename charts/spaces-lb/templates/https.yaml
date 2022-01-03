@@ -1,0 +1,221 @@
+
+{{- $VGCPName  := .Values.GCPName -}}
+{{- $VValueone  := .Values.Valueone -}}
+
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeHealthCheck
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-healthcheck
+spec:
+  checkIntervalSec: 10
+  timeoutSec: 10
+  healthyThreshold: 1
+  unhealthyThreshold: 3
+  httpHealthCheck:
+    requestPath: /healthz/ready
+    port: 15021
+  location: global
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeHealthCheck
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-socketio-proxy-healthcheck
+spec:
+  checkIntervalSec: 10
+  timeoutSec: 10
+  healthyThreshold: 1
+  unhealthyThreshold: 3
+  httpHealthCheck:
+    requestPath: /rdhealth
+    port: 8080
+  location: global
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeBackendBucket
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-frontend-st
+  labels:
+    label-one: {{ .Values.Valueone }}
+spec:
+  bucketRef:
+    {{- if .Values.staticFileBucketname  }}
+    name: {{ .Values.staticFileBucketname }}
+    {{- else }}
+    name: {{ .Values.GCPName }}-{{ .Values.Valueone }}-st
+    {{- end}}
+  description: contains a reference to a bucket for use with HTTP(S) load-balancing and integrated CDN, caching on endpoints for only 1/10th the default time
+  enableCdn: true
+  cdnPolicy:
+    signedUrlCacheMaxAgeSec: 600
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeBackendService
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-frontend-bk
+spec:
+  description: Backend service for spaces frontend and apis
+  backend:
+  {{- range (split "," .Values.neg_zones) }}
+  - group:
+      networkEndpointGroupRef:
+        external: https://www.googleapis.com/compute/v1/projects/{{ $VGCPName }}/zones/{{ . }}/networkEndpointGroups/frontend-{{ $VValueone }}
+    balancingMode: RATE
+    capacityScaler: 1
+    maxRate: 100
+  {{- end }}
+  timeoutSec: 70
+  healthChecks:
+    - healthCheckRef:
+        name: {{ .Values.Valueone }}-healthcheck
+  protocol: HTTP
+  logConfig:
+    enable: true
+  location: global
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeBackendService
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-socket-bk
+spec:
+  description: Backend service for spaces socket
+  backend:
+  {{- range (split "," .Values.neg_zones) }}
+  - group:
+      networkEndpointGroupRef:
+        external: https://www.googleapis.com/compute/v1/projects/{{ $VGCPName }}/zones/{{ . }}/networkEndpointGroups/socketio-proxy-neg-{{ $VValueone }}
+    balancingMode: RATE
+    capacityScaler: 1
+    maxRate: 100
+  {{- end }}
+  timeoutSec: 360000
+  healthChecks:
+    - healthCheckRef:
+        name: {{ .Values.Valueone }}-socketio-proxy-healthcheck
+  protocol: HTTP
+  logConfig:
+    enable: true
+  location: global
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeBackendService
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-task-bk
+spec:
+  description: Backend service for spaces task
+  backend:
+  {{- range (split "," .Values.neg_zones) }}
+  - group:
+      networkEndpointGroupRef:
+        external: https://www.googleapis.com/compute/v1/projects/{{ $VGCPName }}/zones/{{ . }}/networkEndpointGroups/task-{{ $VValueone }}
+    balancingMode: RATE
+    capacityScaler: 1
+    maxRate: 100
+  {{- end }}
+  timeoutSec: 720
+  healthChecks:
+    - healthCheckRef:
+        name: {{ .Values.Valueone }}-healthcheck
+  protocol: HTTP
+  logConfig:
+    enable: true
+  location: global
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeTargetHTTPSProxy
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-https-proxy
+spec:
+  description: {{ .Values.Valueone }} target https proxy
+  urlMapRef:
+    name: {{ .Values.Valueone }}-https
+  sslCertificates:
+    - external: https://www.googleapis.com/compute/v1/projects/{{ .Values.GCPName }}/global/sslCertificates/{{ .Values.certname }}
+  quicOverride: ENABLE
+  location: global
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeForwardingRule
+metadata:
+  namespace: config-connector
+  labels:
+    label-one: {{ .Values.Valueone }}-fdrule-https-ipv4
+  name: {{ .Values.Valueone }}-fdrule-https-ipv4
+spec:
+  description: A global forwarding rule for {{ .Values.Valueone }} http
+  target:
+    targetHTTPSProxyRef:
+      name: {{ .Values.Valueone }}-https-proxy
+  portRange: "443"
+  ipProtocol: "TCP"
+  location: global
+  ipAddress:
+    addressRef:
+      name: {{ .Values.Valueone }}-ipv4
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeForwardingRule
+metadata:
+  namespace: config-connector
+  labels:
+    label-one: {{ .Values.Valueone }}-fdrule-https-ipv6
+  name: {{ .Values.Valueone }}-fdrule-https-ipv6
+spec:
+  description: A global forwarding rule for {{ .Values.Valueone }} http
+  target:
+    targetHTTPSProxyRef:
+      name: {{ .Values.Valueone }}-https-proxy
+  portRange: "443"
+  ipProtocol: "TCP"
+  location: global
+  ipAddress:
+    addressRef:
+      name: {{ .Values.Valueone }}-ipv6
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeURLMap
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-https
+spec:
+  location: global
+  defaultService:
+    backendBucketRef:
+      name: {{ .Values.Valueone }}-frontend-st
+  pathMatcher:
+    - name: frontend
+      defaultService:
+        backendBucketRef:
+          name: {{ .Values.Valueone }}-frontend-st
+      pathRule:
+        - paths: ["/admin","/admin/*","/spaces", "/spaces/*", "/guestjoin", "/guestjoin/*", "/u", "/u/*", "/api/*", "/developers/docs", "/developers/docs/","/mobile", "/mobile/", "/error", "/error/*", "/fecha.umd.js.map", "/desktopFirstScreen", "/privacy","/"]
+          service:
+            backendServiceRef:
+              name: {{ .Values.Valueone }}-frontend-bk
+    - name: frontendapis
+      defaultService:
+        backendServiceRef:
+          name: {{ .Values.Valueone }}-frontend-bk
+    - name: socket
+      defaultService:
+        backendServiceRef:
+          name: {{ .Values.Valueone }}-socket-bk
+    - name: task
+      defaultService:
+        backendServiceRef:
+          name: {{ .Values.Valueone }}-task-bk
+  hostRule:
+    - hosts: [{{ .Values.frontendDomains }}]
+      pathMatcher: frontend
+    - hosts: [{{ .Values.frontendapiDomains }}]
+      pathMatcher: frontendapis
+    - hosts: [{{ .Values.socketDomains }}]
+      pathMatcher: socket
+    - hosts: [{{ .Values.taskDomains }}]
+      pathMatcher: task

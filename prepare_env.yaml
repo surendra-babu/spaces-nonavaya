@@ -1,7 +1,25 @@
+# Must Make sure the vpc network has firewall rule to allow any ip with port 15021, 8080, 8090, 8100
+#Run the command at the root folder to do Debug:
+#  cloud-build-local --config=devops/deploy-to/k8s/istio/cloudbuild/cloudbuild.yaml --dryrun=false . 
+#  
 substitutions:
   _CLUSTER_NAME: testcluster
   _CLUSTER_ZONE: us-central1
+  _CC_CLUSTER_NAME: gcp-configconnector-server
+  _CC_CLUSTER_ZONE: us-central1-c
+  _STATICFILEBUCKETNAME: ""
+  # _OPERATOR_VALUES: "--set frontend_neg=frontend-x14 --set socketio_neg=socketio-x14 --set task_neg=task-x14"
   _INJECT_NAMESPACES: default
+  # This service account will be applied to config spaces infrastructure in GCP. Such as load balancer
+  # Prefer give this service account project editor permission
+  # If the GCP has no such service account, please run following command
+  # Add the service account and run command 
+  # gcloud iam service-accounts add-iam-policy-binding ${CONFIG_CONNECTOR_SERVICE_ACCOUNT} --member=\"serviceAccount:$gcp_project.svc.id.goog[cnrm-system/cnrm-controller-manager]\" --role=\"roles/iam.workloadIdentityUser\" --project=$gcp_project
+  _CONFIG_CONNECTOR_SERVICE_ACCOUNT: config-connector@onesnastaging.iam.gserviceaccount.com
+  _FRONT_DOMAINS: "loganstaging2020.esna.com"
+  _API_DOMAINS:   "loganstaging2020apis.esna.com"
+  _SOCKET_DOMAINS: "loganstaging2020apis-socket.esna.com"
+  _TASK_DOMAINS:   "loganstaging2020apis-task.esna.com"
 
 steps:
   - id: "Check installation environment"
@@ -20,7 +38,7 @@ steps:
            '-p', '${PROJECT_ID}', 
            '-c', '${_CLUSTER_NAME}', 
            '-z', '${_CLUSTER_ZONE}']
-           
+
   - id: "Install simple spaces app"
     name: gcr.io/onesnastaging/istio-install-image
     entrypoint: /bin/bash
@@ -29,7 +47,33 @@ steps:
            '-p', '${PROJECT_ID}', 
            '-c', '${_CLUSTER_NAME}', 
            '-z', '${_CLUSTER_ZONE}']
-
+  
+  - id: "Install Config Connector addons"
+    name: gcr.io/onesnastaging/istio-install-image
+    entrypoint: /bin/bash
+    env: ['CONFIG_CONNECTOR_SERVICE_ACCOUNT=${_CONFIG_CONNECTOR_SERVICE_ACCOUNT}',
+          'CC_CLUSTER_NAME=${_CC_CLUSTER_NAME}',
+          'CC_CLUSTER_ZONE=${_CC_CLUSTER_ZONE}']
+    args: ['scripts/install_cco.sh', 
+           '-p', '${PROJECT_ID}', 
+           '-c', '${_CLUSTER_NAME}', 
+           '-z', '${_CLUSTER_ZONE}']
+  
+  - id: "Install LB"
+    name: gcr.io/onesnastaging/istio-install-image
+    entrypoint: /bin/bash
+    env: ['CONFIG_CONNECTOR_SERVICE_ACCOUNT=${_CONFIG_CONNECTOR_SERVICE_ACCOUNT}',
+          'FRONT_DOMAINS=${_FRONT_DOMAINS}',
+          'API_DOMAINS=${_API_DOMAINS}',
+          'SOCKET_DOMAINS=${_SOCKET_DOMAINS}',
+          'TASK_DOMAINS=${_TASK_DOMAINS}',
+          'CC_CLUSTER_NAME=${_CC_CLUSTER_NAME}',
+          'CC_CLUSTER_ZONE=${_CC_CLUSTER_ZONE}',
+          'STATICFILEBUCKETNAME=${_STATICFILEBUCKETNAME}']
+    args: ['scripts/install_lb.sh', 
+           '-p', '${PROJECT_ID}', 
+           '-c', '${_CLUSTER_NAME}', 
+           '-z', '${_CLUSTER_ZONE}']
 timeout: 3600s
 options:
     substitution_option: 'ALLOW_LOOSE'

@@ -1,0 +1,26 @@
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeAddress
+metadata:
+  namespace: config-connector
+  name:  {{ .Values.Valueone }}-ipv4
+  labels:
+    label-one: {{ .Values.Valueone }}
+spec:
+  addressType: EXTERNAL
+  description: Address IPV4 for loadbalancer {{ .Values.Valueone }}
+  location: global
+  ipVersion: IPV4
+
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeAddress
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-ipv6
+  labels:
+    label-one: {{ .Values.Valueone }}
+spec:
+  addressType: EXTERNAL
+  description: Address IPV6 for loadbalancer {{ .Values.Valueone }}
+  location: global
+  ipVersion: IPV6

@@ -1,0 +1,59 @@
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeForwardingRule
+metadata:
+  namespace: config-connector
+  labels:
+    label-one: {{ .Values.Valueone }}-fdrule-http-ipv4
+  name: {{ .Values.Valueone }}-fdrule-http-ipv4
+spec:
+  description: A global forwarding rule for {{ .Values.Valueone }} http
+  target:
+    targetHTTPProxyRef:
+      name: {{ .Values.Valueone }}-http-proxy
+  portRange: "80"
+  ipProtocol: "TCP"
+  location: global
+  ipAddress:
+    addressRef:
+      name: {{ .Values.Valueone }}-ipv4
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeForwardingRule
+metadata:
+  namespace: config-connector
+  labels:
+    label-one: {{ .Values.Valueone }}-fdrule-http-ipv6
+  name: {{ .Values.Valueone }}-fdrule-http-ipv6
+spec:
+  description: A global forwarding rule for {{ .Values.Valueone }} http
+  target:
+    targetHTTPProxyRef:
+      name: {{ .Values.Valueone }}-http-proxy
+  portRange: "80"
+  ipProtocol: "TCP"
+  location: global
+  ipAddress:
+    addressRef:
+      name: {{ .Values.Valueone }}-ipv6
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeTargetHTTPProxy
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-http-proxy
+spec:
+  description: {{ .Values.Valueone }} target http proxy
+  urlMapRef:
+    name: {{ .Values.Valueone }}-http
+  location: global
+---
+apiVersion: compute.cnrm.cloud.google.com/v1beta1
+kind: ComputeURLMap
+metadata:
+  namespace: config-connector
+  name: {{ .Values.Valueone }}-http
+spec:
+  location: global
+  defaultUrlRedirect:
+    httpsRedirect: true
+    stripQuery: false
