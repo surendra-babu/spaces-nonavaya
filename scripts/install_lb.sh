@@ -85,7 +85,7 @@ escaped_neg_zones=$(echo  $NEG_ZONES | sed -e 's/,/\\\,/g' -e 's/ //g')
 execCMD "helm upgrade --install \
         --set GCPName=$gcp_project
         --set Valueone=$cluster_name \
-        --set zone=$zone \
+        --set region=$zone \
         --set certname=$certname \
         --set frontendDomains='$escaped_frontenddomains' \
         --set frontendapiDomains='$escaped_frontendapidomains' \
